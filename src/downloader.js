@@ -8,7 +8,7 @@
  */
 
 const argv = require('minimist')(process.argv.slice(2));
-const debug = require('debug')('au');
+const debug = require('debug')('au:downloader');
 const mkdirp = require('make-dir');
 const path = require('path');
 const FD = require('fast-download');
@@ -19,14 +19,16 @@ const getChecksum = promisify(require('checksum').file);
 const access = promisify(fs.access);
 const unlink = promisify(fs.unlink);
 
-function messageAndExit(message, success = true) {
+function messageAndExit(message, success = true, dontExit) {
     message.success = success;
 
     if (process.send)
         process.send(message);
     else
         debug(message);
-    process.exit(success ? 0 : 1);
+
+    if (!dontExit)
+        process.exit(success ? 0 : 1);
 };
 
 function fileExists(filePath) {
@@ -57,6 +59,7 @@ function startOrResumeDownload(url, dir, checksum) {
 
         function onStart() {
             debug(`Starting download of ${url} to ${downloadFilePath}`);
+            return messageAndExit({ code: 'DOWNLOADSTARTED' }, true, true);
         };
 
         async function onEnd(err) {
@@ -98,9 +101,9 @@ async function init() {
 
     try {
         const updateFilePath = await startOrResumeDownload(url, dir, checksum);
-        return messageAndExit({ updateFilePath }, true);
+        return messageAndExit({ code: 'DOWNLOADENDED', updateFilePath }, true);
     } catch (err) {
-        return messageAndExit({ code: err.code, message: err.message });
+        return messageAndExit({ code: err.code, message: err.message }, false);
     }
 };
 

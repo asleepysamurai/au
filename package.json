@@ -13,6 +13,7 @@
     "fast-download": "^0.3.6",
     "make-dir": "^1.1.0",
     "minimist": "^1.2.0",
-    "superagent": "^3.8.2"
+    "superagent": "^3.8.2",
+    "targz": "^1.0.1"
   }
 }
