@@ -11,7 +11,7 @@ const argv = require('minimist')(process.argv.slice(2));
 const debug = require('debug')('au');
 const mkdirp = require('make-dir');
 const path = require('path');
-const mtd = require('zeltice-mt-downloader');
+const FD = require('fast-download');
 const fs = require('fs');
 const { promisify } = require('util');
 
@@ -36,14 +36,16 @@ function fileReadWritable(filePath) {
     return access(filePath, fs.constants.R_OK | fs.constants.W_OK);
 };
 
-function download(fileOrPath, url, onStart = () => {}, onEnd = () => {}) {
-    debug(`Downloading with url: ${url} and filePath: ${fileOrPath}`);
-    const downloader = new mtd(fileOrPath, url, {
-        onStart,
-        onEnd
+function download(filePath, url, onStart = () => {}, onEnd = () => {}) {
+    debug(`Downloading with url: ${url} and filePath: ${filePath}`);
+    const downloader = new FD(url, {
+        destFile: filePath,
+        resumeFile: true
     });
 
-    downloader.start();
+    downloader.on('start', onStart);
+    downloader.on('error', onEnd);
+    downloader.on('end', onEnd);
 };
 
 async function startOrResumeDownload(url, dir, fileName) {
