@@ -8,6 +8,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "checksum": "^0.1.1",
     "debug": "^3.1.0",
     "fast-download": "^0.3.6",
     "make-dir": "^1.1.0",

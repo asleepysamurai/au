@@ -14,6 +14,7 @@ const path = require('path');
 const FD = require('fast-download');
 const fs = require('fs');
 const { promisify } = require('util');
+const getChecksum = promisify(require('checksum').file);
 
 const access = promisify(fs.access);
 const unlink = promisify(fs.unlink);
@@ -48,45 +49,44 @@ function download(filePath, url, onStart = () => {}, onEnd = () => {}) {
     downloader.on('end', onEnd);
 };
 
-async function startOrResumeDownload(url, dir, fileName) {
-    const downloadFileName = fileName || path.basename(url);
+function startOrResumeDownload(url, dir, checksum) {
+    return new Promise(async(resolve, reject) => {
+        const downloadFileName = path.basename(url);
 
-    const downloadFilePath = path.resolve(dir, downloadFileName);
-    const resumeFilePath = path.resolve(dir, `${downloadFileName}.mtd`);
+        const downloadFilePath = path.resolve(dir, downloadFileName);
 
-    function onStart() {
-        debug(`Starting download of ${url} to ${resumeFilePath}`);
-    };
+        function onStart() {
+            debug(`Starting download of ${url} to ${downloadFilePath}`);
+        };
 
-    async function onEnd(err) {
-        if (err && err.message && err.message.indexOf('.mtd') > -1) {
-            debug(`.mtd corrupt. delete and start again`);
-            await unlink(resumeFilePath);
-            return await startOrResumeDownload(url, dir);
-        }
-        debug(`Finished download of ${url} with ${err}`);
-    };
+        async function onEnd(err) {
+            if (err) {
+                debug(`Error while downloading update: ${err.message}`);
+                return reject(err);
+            }
 
-    try {
-        await fileExists(resumeFilePath);
-    } catch (err) {
-        return await download(downloadFilePath, url, onStart, onEnd);
-    }
+            debug(`Finished download of ${url}`);
 
-    try {
-        await fileReadWritable(resumeFilePath);
-    } catch (err) {
-        debug(`Cannot read/write ${resumeFilePath}. Creating anew.`);
-        return startOrResumeDownload(url, dir, `${downloadFileName}-1`);
-    }
+            const fileChecksum = await getChecksum(downloadFilePath, { algorithm: 'sha256' });
+            debug(`File checksum: ${fileChecksum}`);
+            if (fileChecksum == checksum) {
+                return resolve(downloadFilePath);
+            } else {
+                await unlink(downloadFilePath);
+                let err = new Error('Checksum mismatch. Deleted downloaded file.');
+                err.code = 'EBADCHECKSUM';
+                return reject(err);
+            }
+        };
 
-    await download(resumeFilePath, null, onStart, onEnd);
+        await download(downloadFilePath, url, onStart, onEnd);
+    });
 };
 
 async function init() {
-    const { url, dir } = argv;
+    const { url, dir, checksum } = argv;
 
-    if (!(url && dir))
+    if (!(url && dir && checksum))
         return messageAndExit({ code: 'EBADPARAMS' });
 
     const tempDirPath = path.join(dir, ' ./temp');
@@ -96,7 +96,12 @@ async function init() {
         return messageAndExit({ code: 'EMAKEDIRFAIL' });
     }
 
-    await startOrResumeDownload(url, dir);
+    try {
+        const updateFilePath = await startOrResumeDownload(url, dir, checksum);
+        return messageAndExit({ updateFilePath }, true);
+    } catch (err) {
+        return messageAndExit({ code: err.code, message: err.message });
+    }
 };
 
 init();

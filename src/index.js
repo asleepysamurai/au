@@ -6,7 +6,7 @@ const path = require('path');
 const fork = require('child_process').fork();
 const superagent = require('superagent');
 
-function spawnDownloader(url, dir, onUpdateReady, onUpdateFail) {
+function downloadUpdateFile(url, dir, onUpdateReady, onUpdateFail) {
     return new Promise((resolve, reject) => {
         const cp = fork(path.join(__dirname, './downloader'), [`--url=${url}`, `--dir=${dir}`], { execArgv: [`--inspect=${++lastDebugPort}`] });
 
@@ -14,12 +14,10 @@ function spawnDownloader(url, dir, onUpdateReady, onUpdateFail) {
             if (message.success && message.code == 'DOWNLOADSTARTED') {
                 cp.once('message', message => {
                     if (message.success && message.code == 'DOWNLOADENDED')
-                        return onUpdateReady();
+                        return resolve(message.updateFilePath);
 
-                    return onUpdateFail(message);
+                    return reject(message);
                 });
-
-                return resolve();
             }
 
             return reject(message);
@@ -49,7 +47,7 @@ async function updateIfAvailable(opts) {
 
     const shouldDownload = opts.shouldDownload(updateJSON);
     if (shouldDownload instanceof Promise ? await shouldDownload : shouldDownload) {
-        return await spawnDownloader(opts.getDownloadURL(updateJSON));
+        return await downloadUpdateFile(opts.getDownloadURL(updateJSON));
     }
 };
 
