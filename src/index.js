@@ -71,7 +71,6 @@ async function updateIfAvailable(opts) {
     }
 };
 
-/*
 async function test() {
     const downloadFilePath = await updateIfAvailable({
         shouldDownload: () => true,
@@ -82,9 +81,8 @@ async function test() {
         getChecksum: manifest => manifest.checksum
     });
 };
-*/
 
-test();
+//test();
 
 module.exports = {
     updateIfAvailable
