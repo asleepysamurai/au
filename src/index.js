@@ -81,11 +81,11 @@ async function updateIfAvailable(opts) {
         if (err instanceof SyntaxError) {
             const error = new Error('Invalid update manifest');
             error.code == 'EBADMANIFEST';
-            throw error;
+            return //throw error;
         } else {
             const error = new Error('Update check failed');
             error.code == 'ECHECKFAIL';
-            throw error;
+            return //throw error;
         }
     }
 
@@ -123,7 +123,7 @@ async function updateIfAvailable(opts) {
                 await unlink(updateFilePath);
 
             debug(`Failed to download and extract ${downloadURL}. Deleting downloaded file.`);
-            throw err;
+            return //throw err;
         }
     }
 };
@@ -154,7 +154,8 @@ async function test() {
     debug(`semver: ${semver}`);
 };
 
-//test();
+if (require.main === module)
+    test();
 
 async function init(opts) {
     setupUpdateChecker(opts);
