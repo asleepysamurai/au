@@ -68,8 +68,10 @@ async function getLatestAvailableSemver(opts) {
 };
 
 async function updateIfAvailable(opts) {
-    if (!(opts && opts.url && opts.shouldDownload && opts.getDownloadURL))
-        throw new Error('Invalid update check url');
+    if (!(opts && opts.url && opts.shouldDownload && opts.getDownloadURL)) {
+        const error = new Error('Invalid update check url');
+        return debug(error);
+    }
 
     let updateJSON;
     try {
@@ -80,12 +82,10 @@ async function updateIfAvailable(opts) {
     } catch (err) {
         if (err instanceof SyntaxError) {
             const error = new Error('Invalid update manifest');
-            error.code == 'EBADMANIFEST';
-            return //throw error;
+            return debug(error);
         } else {
             const error = new Error('Update check failed');
-            error.code == 'ECHECKFAIL';
-            return //throw error;
+            return debug(error);
         }
     }
 
@@ -163,5 +163,6 @@ async function init(opts) {
 };
 
 module.exports = {
-    init
+    getExecutable,
+    setupUpdateChecker
 };
