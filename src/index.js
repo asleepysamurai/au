@@ -154,7 +154,7 @@ async function test() {
     debug(`semver: ${semver}`);
 };
 
-test();
+//test();
 
 async function init(opts) {
     setupUpdateChecker(opts);
@@ -162,5 +162,5 @@ async function init(opts) {
 };
 
 module.exports = {
-    updateIfAvailable
+    init
 };
