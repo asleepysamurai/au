@@ -19,6 +19,8 @@ const stat = promisify(fs.stat);
 
 const defaultUpdateCheckInterval = (1000 * 60 * 60 * 24) * 1; //Check every 1 days
 
+let isUpdating = false;
+
 function downloadUpdateFile(url, dir, checksum) {
     return new Promise((resolve, reject) => {
         const cp = fork(path.join(__dirname, './downloader'), [
@@ -68,10 +70,17 @@ async function getLatestAvailableSemver(opts) {
 };
 
 async function updateIfAvailable(opts) {
+    if (isUpdating) {
+        const error = new Error('Update already in process. Quitting this interval.');
+        return debug(error);
+    }
+
     if (!(opts && opts.url && opts.shouldDownload && opts.getDownloadURL)) {
         const error = new Error('Invalid update check url');
         return debug(error);
     }
+
+    isUpdating = true;
 
     let updateJSON;
     try {
@@ -80,6 +89,8 @@ async function updateIfAvailable(opts) {
                 .accept('json') || {})
             .body;
     } catch (err) {
+        isUpdating = false;
+
         if (err instanceof SyntaxError) {
             const error = new Error('Invalid update manifest');
             return debug(error);
@@ -96,6 +107,7 @@ async function updateIfAvailable(opts) {
     const shouldDownload = opts.shouldDownload(updateJSON);
 
     if (isVersionAlreadyDownloaded) {
+        isUpdating = false;
         return debug(`No updates available. Quitting update check.`);
     }
 
@@ -116,11 +128,15 @@ async function updateIfAvailable(opts) {
             });
             await unlink(updateFilePath);
 
+            isUpdating = false;
+
             if (opts.onUpdateReady)
                 return opts.onUpdateReady(semver);
         } catch (err) {
             if (updateFilePath)
                 await unlink(updateFilePath);
+
+            isUpdating = false;
 
             debug(`Failed to download and extract ${downloadURL}. Deleting downloaded file.`);
             return //throw err;
