@@ -12,6 +12,7 @@ const rimraf = promisify(require('rimraf'));
 const fs = require('fs');
 const compareVersions = require('compare-versions');
 const isSemver = require('is-semver');
+const mkdirp = require('make-dir');
 
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
@@ -37,6 +38,11 @@ function downloadUpdateFile(url, dir, checksum) {
                 return reject(message);
         });
     });
+};
+
+async function ensureDirExists(dirPath) {
+    if (dirPath)
+        return await mkdirp(dirPath);
 };
 
 function setupUpdateChecker(opts) {
@@ -81,6 +87,8 @@ async function updateIfAvailable(opts) {
     }
 
     isUpdating = true;
+
+    await ensureDirExists(opts.dirPath);
 
     let updateJSON;
     try {
@@ -145,7 +153,15 @@ async function updateIfAvailable(opts) {
 };
 
 async function getExecutable(opts) {
+    await ensureDirExists(opts.dirPath);
+
     const semver = opts.version || await getLatestAvailableSemver(opts);
+    if (!semver) {
+        let error = new Error('No versions found.');
+        error.code = 'ENOVERSIONS';
+        throw error;
+    }
+
     const dirPath = path.join(opts.dirPath, `./${semver}`);
 
     debug(`Requiring version ${semver} from ${dirPath}`);
