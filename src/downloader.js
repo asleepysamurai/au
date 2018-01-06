@@ -90,13 +90,13 @@ async function init() {
     const { url, dir, checksum } = argv;
 
     if (!(url && dir && checksum))
-        return messageAndExit({ code: 'EBADPARAMS' });
+        return messageAndExit({ code: 'EBADPARAMS' }, false);
 
     const tempDirPath = path.join(dir, ' ./temp');
     try {
         await mkdirp(tempDirPath);
     } catch (err) {
-        return messageAndExit({ code: 'EMAKEDIRFAIL' });
+        return messageAndExit({ code: 'EMAKEDIRFAIL' }, false);
     }
 
     try {
