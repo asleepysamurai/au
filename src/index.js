@@ -153,22 +153,29 @@ async function updateIfAvailable(opts) {
 };
 
 async function getExecutable(opts) {
-    await ensureDirExists(opts.dirPath);
+    const dirPaths = Array.isArray(opts.dirPath) ? opts.dirPath : [opts.dirPath];
 
-    const semver = opts.version || await getLatestAvailableSemver(opts);
-    if (!semver) {
-        let error = new Error('No versions found.');
-        error.code = 'ENOVERSIONS';
-        throw error;
-    }
+    const getExecutables = dirPaths.map(async(dirPath) => {
+        await ensureDirExists(dirPath);
 
-    const dirPath = path.join(opts.dirPath, `./${semver}`);
+        const semver = opts.version || await getLatestAvailableSemver(Object.assign({}, opts, { dirPath }));
+        if (!semver) {
+            return;
+        }
 
-    debug(`Requiring version ${semver} from ${dirPath}`);
-    return {
-        requirePath: dirPath,
-        semver: semver
-    };
+        const requirePath = path.join(dirPath, `./${semver}`);
+        return {
+            requirePath,
+            semver
+        };
+    });
+
+    const executablesByDir = (await Promise.all(getExecutables)).filter(e => !!e);
+    const executablesSortedBySemver = executablesByDir.sort((a, b) => compareVersions(a.semver, b.semver));
+
+    const executable = executablesSortedBySemver.pop();
+    debug(`Requiring version ${executable.semver} from ${executable.requirePath}`);
+    return executable;
 };
 
 async function test() {
