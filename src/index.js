@@ -28,7 +28,7 @@ function downloadUpdateFile(url, dir, checksum) {
             `--url=${url}`,
             `--dir=${dir}`,
             `--checksum=${checksum}`
-        ], { execArgv: [`--inspect=${9230}`] });
+        ], process.env.NODE_ENV == 'development' ? { execArgv: [`--inspect=${9230}`] } : null);
 
         cp.on('message', message => {
             if (message.success && message.code == 'DOWNLOADENDED')
