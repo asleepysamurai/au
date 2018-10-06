@@ -139,7 +139,7 @@ async function updateIfAvailable(opts) {
             isUpdating = false;
 
             if (opts.onUpdateReady)
-                return opts.onUpdateReady(semver);
+                return opts.onUpdateReady(semver, updateJSON);
         } catch (err) {
             if (updateFilePath)
                 await unlink(updateFilePath);
@@ -186,7 +186,10 @@ async function test() {
         getDownloadURL: manifest => manifest.url,
         getChecksum: manifest => manifest.checksum,
         getSemver: manifest => manifest.semver,
-        onUpdateReady: semver => debug(`Update version ${semver} Extracted and Ready to go.`)
+        onUpdateReady: semver => {
+            debug(`Update version ${semver} Extracted and Ready to go.
+Manifest: ${JSON.stringify(updateJSON)}`);
+        }
     });
 
     debug(`requirePath: ${requirePath}`);
