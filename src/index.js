@@ -94,6 +94,7 @@ async function updateIfAvailable(opts) {
     try {
         updateJSON = (await superagent
                 .get(opts.url)
+                .set('User-Agent', opts.userAgent || 'node-au')
                 .accept('json') || {})
             .body;
     } catch (err) {
