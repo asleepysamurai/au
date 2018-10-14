@@ -45,10 +45,10 @@ async function ensureDirExists(dirPath) {
         return await mkdirp(dirPath);
 };
 
-function setupUpdateChecker(opts) {
+function setupUpdateChecker(opts, currentSemver) {
     const updateCheckInterval = opts.updateCheckInterval || defaultUpdateCheckInterval;
-    setInterval(updateIfAvailable.bind(null, opts), updateCheckInterval); //Setup every x ms check
-    setImmediate(updateIfAvailable.bind(null, opts)); //Setup immediate check
+    setInterval(updateIfAvailable.bind(null, opts, currentSemver), updateCheckInterval); //Setup every x ms check
+    setImmediate(updateIfAvailable.bind(null, opts, currentSemver)); //Setup immediate check
 };
 
 async function getAvailableSemvers(opts) {
@@ -75,7 +75,7 @@ async function getLatestAvailableSemver(opts) {
     return availableSemvers[availableSemvers.length - 1];
 };
 
-async function updateIfAvailable(opts) {
+async function updateIfAvailable(opts, currentSemver) {
     if (isUpdating) {
         const error = new Error('Update already in process. Quitting this interval.');
         return debug(error);
@@ -112,13 +112,14 @@ async function updateIfAvailable(opts) {
     const semver = opts.getSemver(updateJSON);
     const availableSemvers = await getAvailableSemvers(opts);
     const isVersionAlreadyDownloaded = availableSemvers.indexOf(semver) > -1;
+    const isUpdateVersionOlderThanCurent = compareVersions(currentSemver, semver) > 0;
 
-    const shouldDownload = opts.shouldDownload(updateJSON);
-
-    if (isVersionAlreadyDownloaded) {
+    if (isVersionAlreadyDownloaded || isUpdateVersionOlderThanCurent) {
         isUpdating = false;
         return debug(`No updates available. Quitting update check.`);
     }
+
+    const shouldDownload = opts.shouldDownload(updateJSON);
 
     if (shouldDownload instanceof Promise ? await shouldDownload : shouldDownload) {
         let updateFilePath;
@@ -201,8 +202,10 @@ if (require.main === module)
     test();
 
 async function init(opts) {
-    setupUpdateChecker(opts);
-    return await getExecutable(opts);
+    const executable = await getExecutable(opts);
+    setupUpdateChecker(opts, executable.semver);
+
+    return executable;
 };
 
 module.exports = {
