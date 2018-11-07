@@ -112,9 +112,9 @@ async function updateIfAvailable(opts, currentSemver) {
     const semver = opts.getSemver(updateJSON);
     const availableSemvers = await getAvailableSemvers(opts);
     const isVersionAlreadyDownloaded = availableSemvers.indexOf(semver) > -1;
-    const isUpdateVersionOlderThanCurent = compareVersions(currentSemver, semver) > 0;
+    const isUpdateVersionNewerThanCurrent = compareVersions(semver, currentSemver) == 1;
 
-    if (isVersionAlreadyDownloaded || isUpdateVersionOlderThanCurent) {
+    if (isVersionAlreadyDownloaded || !isUpdateVersionNewerThanCurrent) {
         isUpdating = false;
         return debug(`No updates available. Quitting update check.`);
     }
@@ -157,7 +157,7 @@ async function updateIfAvailable(opts, currentSemver) {
 async function getExecutable(opts) {
     const dirPaths = Array.isArray(opts.dirPath) ? opts.dirPath : [opts.dirPath];
 
-    const getExecutables = dirPaths.map(async(dirPath) => {
+    const getExecutables = dirPaths.map(async (dirPath) => {
         await ensureDirExists(dirPath);
 
         const semver = opts.version || await getLatestAvailableSemver(Object.assign({}, opts, { dirPath }));
