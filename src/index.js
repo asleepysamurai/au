@@ -3,7 +3,6 @@
  */
 
 const path = require('path');
-const debug = require('debug')('au:index');
 const fork = require('child_process').fork;
 const superagent = require('superagent');
 const { promisify } = require('util');
@@ -13,6 +12,8 @@ const fs = require('fs');
 const compareVersions = require('compare-versions');
 const isSemver = require('is-semver');
 const mkdirp = require('make-dir');
+
+const debug = require('./debug')('au:index');
 
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
@@ -29,6 +30,9 @@ function downloadUpdateFile(url, dir, checksum) {
             `--dir=${dir}`,
             `--checksum=${checksum}`
         ], process.env.NODE_ENV == 'development' ? { execArgv: [`--inspect=${9230}`] } : null);
+
+        cp.stdout.pipe(process.stdout);
+        cp.stderr.pipe(process.stderr);
 
         cp.on('message', message => {
             if (message.success && message.code == 'DOWNLOADENDED')
@@ -113,6 +117,8 @@ async function updateIfAvailable(opts, currentSemver) {
     const availableSemvers = await getAvailableSemvers(opts);
     const isVersionAlreadyDownloaded = availableSemvers.indexOf(semver) > -1;
     const isUpdateVersionNewerThanCurrent = compareVersions(semver, currentSemver) == 1;
+
+    debug(JSON.stringify({ isVersionAlreadyDownloaded, isUpdateVersionNewerThanCurrent, currentSemver, semver, opts }));
 
     if (isVersionAlreadyDownloaded || !isUpdateVersionNewerThanCurrent) {
         isUpdating = false;

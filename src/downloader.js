@@ -1,5 +1,5 @@
 /**
- * Given a url and a directory, 
+ * Given a url and a directory,
  * downloads the tar file at that url
  * Once downloaded untars the tar file
  * into specified directory.
@@ -8,13 +8,14 @@
  */
 
 const argv = require('minimist')(process.argv.slice(2));
-const debug = require('debug')('au:downloader');
 const mkdirp = require('make-dir');
 const path = require('path');
 const FD = require('fast-download');
 const fs = require('fs');
 const { promisify } = require('util');
 const getChecksum = promisify(require('checksum').file);
+
+const debug = require('./debug')('au:downloader');
 
 const access = promisify(fs.access);
 const unlink = promisify(fs.unlink);
@@ -52,7 +53,7 @@ function download(filePath, url, onStart = () => {}, onEnd = () => {}) {
 };
 
 function startOrResumeDownload(url, dir, checksum) {
-    return new Promise(async(resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const downloadFileName = path.basename(url);
 
         const downloadFilePath = path.resolve(dir, downloadFileName);
