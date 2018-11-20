@@ -25,22 +25,29 @@ let isUpdating = false;
 
 function downloadUpdateFile(url, dir, checksum) {
     return new Promise((resolve, reject) => {
-        const cp = fork(path.join(__dirname, './downloader'), [
-            `--url=${url}`,
-            `--dir=${dir}`,
-            `--checksum=${checksum}`
-        ], process.env.NODE_ENV == 'development' ? { execArgv: [`--inspect=${9230}`] } : null);
+        try {
+            const cp = fork(path.join(__dirname, './downloader'), [
+                `--url=${url}`,
+                `--dir=${dir}`,
+                `--checksum=${checksum}`
+            ], process.env.NODE_ENV == 'development' ? { execArgv: [`--inspect=${9230}`] } : null);
 
-        cp.stdout.pipe(process.stdout);
-        cp.stderr.pipe(process.stderr);
+            if (cp.stdout)
+                cp.stdout.pipe(process.stdout);
+            if (cp.stderr)
+                cp.stderr.pipe(process.stderr);
 
-        cp.on('message', message => {
-            if (message.success && message.code == 'DOWNLOADENDED')
-                return resolve(message.updateFilePath);
+            cp.on('message', message => {
+                if (message.success && message.code == 'DOWNLOADENDED')
+                    return resolve(message.updateFilePath);
 
-            if (!message.success)
-                return reject(message);
-        });
+                if (!message.success)
+                    return reject(message);
+            });
+        } catch (err) {
+            debug('Failed to setup file downloader', err);
+            reject(err);
+        }
     });
 };
 
