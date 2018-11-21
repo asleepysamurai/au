@@ -63,22 +63,31 @@ function setupUpdateChecker(opts, currentSemver) {
 };
 
 async function getAvailableSemvers(opts) {
-    const itemsInDir = await readdir(opts.dirPath);
-    const areItemsDirs = itemsInDir.map(item => stat(path.join(opts.dirPath, `./${item}`)));
+    try {
+        const itemsInDir = await readdir(opts.dirPath);
+        const areItemsDirs = itemsInDir.map(item => stat(path.join(opts.dirPath, `./${item}`)));
 
-    const stats = await Promise.all(areItemsDirs);
-    let dirs = [];
-    let files = [];
+        const stats = await Promise.all(areItemsDirs);
+        let dirs = [];
+        let files = [];
 
-    itemsInDir.forEach((item, i) => {
-        if (stats[i].isDirectory() && isSemver(item))
-            dirs.push(item);
-        else if (stats[i].isFile())
-            files.push(item);
-    });
+        itemsInDir.forEach((item, i) => {
+            if (stats[i].isDirectory() && isSemver(item))
+                dirs.push(item);
+            else if (stats[i].isFile())
+                files.push(item);
+        });
 
-    const availableSemvers = dirs.filter(dirName => files.indexOf(`${dirName}.tar.gz`) == -1);
-    return availableSemvers.sort(compareVersions);
+        const availableSemvers = dirs.filter(dirName => files.indexOf(`${dirName}.tar.gz`) == -1);
+        return availableSemvers.sort(compareVersions);
+    } catch (err) {
+        if (err && err.code == 'ENOENT') {
+            debug(`Provided dirPath: ${opts.dirPath} not present. Ignoring.`);
+            return [];
+        }
+
+        throw err;
+    }
 };
 
 async function getLatestAvailableSemver(opts) {
@@ -136,19 +145,25 @@ async function updateIfAvailable(opts, currentSemver) {
 
     if (shouldDownload instanceof Promise ? await shouldDownload : shouldDownload) {
         let updateFilePath;
+        let extractDir;
         const downloadURL = opts.getDownloadURL(updateJSON);
 
         try {
             updateFilePath = await downloadUpdateFile(downloadURL, opts.dirPath, opts.getChecksum(updateJSON));
 
-            const extractDir = path.join(opts.dirPath, `./${semver}`);
+            extractDir = path.join(opts.dirPath, `./${semver}`);
             debug(`Extracting update targz to ${extractDir}`);
 
             await rimraf(extractDir);
+            process.noAsar = true;
             await untar({
                 src: updateFilePath,
-                dest: extractDir
+                dest: extractDir,
+                tar: {
+                    dereference: true
+                }
             });
+            process.noAsar = false;
             await unlink(updateFilePath);
 
             isUpdating = false;
@@ -156,12 +171,17 @@ async function updateIfAvailable(opts, currentSemver) {
             if (opts.onUpdateReady)
                 return opts.onUpdateReady(semver, updateJSON);
         } catch (err) {
-            if (updateFilePath)
+            if (updateFilePath) {
                 await unlink(updateFilePath);
+            }
+
+            if (extractDir) {
+                await rimraf(extractDir);
+            }
 
             isUpdating = false;
 
-            debug(`Failed to download and extract ${downloadURL}. Deleting downloaded file.`);
+            debug(`Failed to download and extract ${downloadURL}. Deleting downloaded file.`, err);
             return //throw err;
         }
     }
@@ -171,8 +191,6 @@ async function getExecutable(opts) {
     const dirPaths = Array.isArray(opts.dirPath) ? opts.dirPath : [opts.dirPath];
 
     const getExecutables = dirPaths.map(async (dirPath) => {
-        await ensureDirExists(dirPath);
-
         const semver = opts.version || await getLatestAvailableSemver(Object.assign({}, opts, { dirPath }));
         if (!semver) {
             return;
