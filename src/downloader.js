@@ -77,7 +77,7 @@ function startOrResumeDownload(url, dir, checksum) {
                 return resolve(downloadFilePath);
             } else {
                 await unlink(downloadFilePath);
-                let err = new Error('Checksum mismatch. Deleted downloaded file.');
+                let err = new Error(`Checksum mismatch. Deleted downloaded file. Expected '${checksum}', got '${fileChecksum}'`);
                 err.code = 'EBADCHECKSUM';
                 return reject(err);
             }

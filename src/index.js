@@ -52,8 +52,9 @@ function downloadUpdateFile(url, dir, checksum) {
 };
 
 async function ensureDirExists(dirPath) {
-    if (dirPath)
+    if (dirPath) {
         return await mkdirp(dirPath);
+    }
 };
 
 function setupUpdateChecker(opts, currentSemver) {
