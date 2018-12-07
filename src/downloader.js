@@ -54,7 +54,9 @@ function download(filePath, url, onStart = () => {}, onEnd = () => {}) {
 
 function startOrResumeDownload(url, dir, checksum) {
     return new Promise(async (resolve, reject) => {
-        const downloadFileName = path.basename(url);
+        let downloadFileName = path.basename(url);
+        let semver = (downloadFileName.match(/(\d+.\d+.\d+)/) || [])[0];
+        downloadFileName = semver ? `${semver}.tar.gz` : downloadFileName;
 
         const downloadFilePath = path.resolve(dir, downloadFileName);
 

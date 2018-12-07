@@ -1,6 +1,6 @@
 {
   "name": "au",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Auto Updater for any node project",
   "main": "src/index.js",
   "repository": "git@bitbucket.org:84upon2/au-nm.git",
