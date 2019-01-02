@@ -4,10 +4,10 @@
 
 const path = require('path');
 const fork = require('child_process').fork;
-const superagent = require('superagent');
 const { promisify } = require('util');
 const untar = promisify(require('targz').decompress);
 const rimraf = promisify(require('rimraf'));
+const superagent = require('superagent');
 const fs = require('fs');
 const compareVersions = require('compare-versions');
 const isSemver = require('is-semver');
