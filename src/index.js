@@ -23,13 +23,14 @@ const defaultUpdateCheckInterval = (1000 * 60 * 60 * 24) * 1; //Check every 1 da
 
 let isUpdating = false;
 
-function downloadUpdateFile(url, dir, checksum) {
+function downloadUpdateFile(url, dir, checksum, semver) {
     return new Promise((resolve, reject) => {
         try {
             const cp = fork(path.join(__dirname, './downloader'), [
                 `--url=${url}`,
                 `--dir=${dir}`,
-                `--checksum=${checksum}`
+                `--checksum=${checksum}`,
+                `--semver=${semver}`
             ], process.env.NODE_ENV == 'development' ? { execArgv: [`--inspect=${9230}`] } : null);
 
             if (cp.stdout)
@@ -150,7 +151,7 @@ async function updateIfAvailable(opts, currentSemver) {
         const downloadURL = opts.getDownloadURL(updateJSON);
 
         try {
-            updateFilePath = await downloadUpdateFile(downloadURL, opts.dirPath, opts.getChecksum(updateJSON));
+            updateFilePath = await downloadUpdateFile(downloadURL, opts.dirPath, opts.getChecksum(updateJSON), semver);
 
             extractDir = path.join(opts.dirPath, `./${semver}`);
             debug(`Extracting update targz to ${extractDir}`);

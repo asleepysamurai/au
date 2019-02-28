@@ -52,10 +52,9 @@ function download(filePath, url, onStart = () => {}, onEnd = () => {}) {
     downloader.on('end', onEnd);
 };
 
-function startOrResumeDownload(url, dir, checksum) {
+function startOrResumeDownload(url, dir, checksum, semver) {
     return new Promise(async (resolve, reject) => {
         let downloadFileName = path.basename(url);
-        let semver = (downloadFileName.match(/(\d+.\d+.\d+)/) || [])[0];
         downloadFileName = semver ? `${semver}.tar.gz` : downloadFileName;
 
         const downloadFilePath = path.resolve(dir, downloadFileName);
@@ -90,7 +89,7 @@ function startOrResumeDownload(url, dir, checksum) {
 };
 
 async function init() {
-    const { url, dir, checksum } = argv;
+    const { url, dir, checksum, semver } = argv;
 
     if (!(url && dir && checksum))
         return messageAndExit({ code: 'EBADPARAMS' }, false);
@@ -103,7 +102,7 @@ async function init() {
     }
 
     try {
-        const updateFilePath = await startOrResumeDownload(url, dir, checksum);
+        const updateFilePath = await startOrResumeDownload(url, dir, checksum, semver);
         return messageAndExit({ code: 'DOWNLOADENDED', updateFilePath }, true);
     } catch (err) {
         return messageAndExit({ code: err.code, message: err.message }, false);
